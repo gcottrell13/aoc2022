@@ -1,2 +1,6 @@
 
 session_id
+
+.idea/
+
+**/__pycache__/
