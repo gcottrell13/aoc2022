@@ -18,11 +18,12 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 """.strip()
 
 valves = {}
-valves_with_flow: list[str] = []
 
 
 @functools.lru_cache
 def get_shortest_path(start, end):
+    if start == end:
+        return 100000
     visited = []
     queue: list[tuple[int, str]] = [(0, start)]
     while queue:
@@ -40,36 +41,30 @@ for line in data.splitlines():
     rate = int(raw_rate[len('rate='):-1])
     neighbors: list[str] = raw_neighbors.split(', ')
     valves[name] = (rate, neighbors)
-    if rate > 0:
-        valves_with_flow.append(name)
+
+flags = {x: 2 ** i for i, x in enumerate(valves.keys())}
+flows = {x: v[0] for x, v in valves.items()}
+paths = {x: {y: get_shortest_path(x, y) for y in flags} for x in flags}
+g = {x: v for x, v in flows.items() if v > 0}
 
 
-def get_max_flow(at: str, visited: list[str], time: int):
-    flow, _neighbors = valves[at]
-    if time >= 30:
-        return 0
-    visited = visited + [at]
+def get_max_flow(at: str, visited: int, values: dict[int, int], time: int, summ: int):
+    values[visited] = max(values.get(visited, 0), summ)
 
-    neighbors = [
-        (valve, valves[valve][0] / get_shortest_path(at, valve))
-        for valve in valves_with_flow
-        if valve != at and valve not in visited
-    ]
+    for valve in g:
+        T = paths[at][valve]
+        newtime = time - T - 1
+        if not flags[valve] & visited and newtime >= 0:
+            get_max_flow(valve, visited | flags[valve], values, int(newtime), summ + flows[valve] * newtime)
 
-    plans = sorted(neighbors, key=lambda x: x[1], reverse=True)[:3]
-    remaining_time = 30 - time
-    if plans:
-        m = max(
-            get_max_flow(name, visited, time + get_shortest_path(at, name) + 1)
-            for name, _value in plans
-        )
-        released = flow * remaining_time
-        # print(' '.join(visited), m, '+', flow, '* remaining', remaining_time)
-        return m + released
-    # print(' '.join(visited), '+', flow, '* remaining', remaining_time)
-    return flow * remaining_time
+    return values
 
 
-flow = get_max_flow('AA', [], 0)
-# flow = get_max_flow(['DD','BB','JJ','HH','EE','CC'])
-print(flow)
+print(max(get_max_flow('AA', 0, {}, 30, 0).values()))
+part2 = get_max_flow('AA', 0, {}, 26, 0)
+print(max(
+    v1 + v2
+    for k1, v1 in part2.items()
+    for k2, v2 in part2.items()
+    if not k1 & k2
+))
