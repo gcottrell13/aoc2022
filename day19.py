@@ -61,7 +61,7 @@ def visit(budget: int, state: dict[int, int], mk_orebot, mk_claybot, mk_obsbot, 
     queue = [_state_to_bin(budget, 1, 0, 0, 0, 0, 0, 0, 0, '')]
     best = 0
     while queue:
-        d = queue.pop(0)
+        d = queue.pop()
         time, orebot, claybot, obsbot, geobot, ore, clay, obs, geo, trace = _bin_to_state(d)
         if len(queue) > 10000 and len(queue) % 100 == 0:
             out(len(queue))
@@ -70,6 +70,9 @@ def visit(budget: int, state: dict[int, int], mk_orebot, mk_claybot, mk_obsbot, 
             best = geo
             state[trace] = max(state.get(trace, 0), geo)
         if time <= 0:
+            continue
+
+        if geo + geobot * time + (time * (time - 1) // 2) < best:
             continue
 
         # make geobot
@@ -109,12 +112,12 @@ def visit(budget: int, state: dict[int, int], mk_orebot, mk_claybot, mk_obsbot, 
 
 
 def getroutes(t):
-    for blueprint in blueprints:
+    for blueprint in blueprints[:3]:
         state = {}
         id, mk_orebot, mk_claybot, mk_obsbot, mk_geobot = blueprint
         m = visit(t, state, mk_orebot, mk_claybot, mk_obsbot, mk_geobot)
         print(id, m)
-        yield id * m
+        yield m
 
 
-print(sum(getroutes(24)))
+print(math.prod(getroutes(32)))
